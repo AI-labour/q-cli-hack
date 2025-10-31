@@ -269,7 +269,7 @@ interface ToolResult {
         ]
       }
     },
-    "chatTriggerType": "Manual",
+    "chatTriggerType": "MANUAL",
     "history": []
   }
 }

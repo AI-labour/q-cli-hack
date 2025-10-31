@@ -250,7 +250,7 @@ for await (const event of client.generateAssistantResponse({
         origin: "CLI"
       }
     },
-    chatTriggerType: "Manual"
+    chatTriggerType: "MANUAL"
   }
 })) {
   if ('assistantResponseEvent' in event) {
