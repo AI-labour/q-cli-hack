@@ -21,6 +21,9 @@
   "license": "MIT",
   "dependencies": {
     "@aws-sdk/client-sso-oidc": "^3.682.0",
+    "@smithy/eventstream-codec": "^4.2.4",
+    "@smithy/eventstream-serde-universal": "^4.2.4",
+    "@smithy/util-utf8": "^4.2.0",
     "express": "^4.21.1"
   },
   "devDependencies": {
