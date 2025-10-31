@@ -3,6 +3,8 @@ import type {
   GenerateAssistantResponseRequest,
   CodeWhispererEvent,
 } from './types.js';
+import { EventStreamCodec } from '@smithy/eventstream-codec';
+import { toUtf8, fromUtf8 } from '@smithy/util-utf8';
 
 export class CodeWhispererClient {
   private config: CodeWhispererClientConfig;
@@ -57,8 +59,10 @@ export class CodeWhispererClient {
     body: ReadableStream<Uint8Array>
   ): AsyncGenerator<CodeWhispererEvent> {
     const reader = body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = '';
+    // EventStreamCodec(encoder, decoder)
+    // encoder: Uint8Array | string => string
+    // decoder: string => Uint8Array
+    const codec = new EventStreamCodec(toUtf8, fromUtf8);
     let chunkCount = 0;
     let eventCount = 0;
 
@@ -68,57 +72,95 @@ export class CodeWhispererClient {
 
         if (done) {
           console.log(`[DEBUG] Stream ended. Received ${chunkCount} chunks, parsed ${eventCount} events`);
+          codec.endOfStream();
           break;
         }
 
         chunkCount++;
-        const chunk = decoder.decode(value, { stream: true });
-        console.log(`[DEBUG] Received chunk ${chunkCount}, size: ${chunk.length} bytes`);
-        console.log(`[DEBUG] Chunk content:`, chunk.substring(0, 200) + (chunk.length > 200 ? '...' : ''));
+        console.log(`[DEBUG] Received chunk ${chunkCount}, size: ${value.length} bytes`);
         
-        buffer += chunk;
+        // Feed the binary data to the codec
+        codec.feed(value);
 
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.trim() === '') continue;
-
-          console.log(`[DEBUG] Processing line: ${line.substring(0, 100)}${line.length > 100 ? '...' : ''}`);
-
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
-            try {
-              const event = JSON.parse(data);
-              eventCount++;
-              console.log(`[DEBUG] Parsed event ${eventCount}:`, JSON.stringify(event, null, 2));
-              yield event;
-            } catch (error) {
-              console.error('[DEBUG] Failed to parse event:', data, error);
-            }
-          } else {
-            console.log(`[DEBUG] Line does not start with "data: ": ${line.substring(0, 50)}`);
+        // Get all available messages from the codec
+        const availableMessages = codec.getAvailableMessages();
+        const messages = availableMessages.getMessages();
+        for (const message of messages) {
+          eventCount++;
+          console.log(`[DEBUG] Decoded message ${eventCount}`);
+          console.log(`[DEBUG] Message headers:`, JSON.stringify(message.headers, null, 2));
+          
+          // Parse the event from the message
+          const event = this.parseEventFromMessage(message);
+          if (event) {
+            console.log(`[DEBUG] Parsed event ${eventCount}:`, JSON.stringify(event, null, 2));
+            yield event;
           }
         }
       }
 
-      if (buffer.trim()) {
-        console.log(`[DEBUG] Processing remaining buffer: ${buffer.substring(0, 100)}${buffer.length > 100 ? '...' : ''}`);
-        if (buffer.startsWith('data: ')) {
-          const data = buffer.slice(6);
-          try {
-            const event = JSON.parse(data);
-            eventCount++;
-            console.log(`[DEBUG] Parsed final event ${eventCount}:`, JSON.stringify(event, null, 2));
-            yield event;
-          } catch (error) {
-            console.error('[DEBUG] Failed to parse final event:', data, error);
-          }
+      // Process any remaining messages
+      const finalAvailableMessages = codec.getAvailableMessages();
+      const finalMessages = finalAvailableMessages.getMessages();
+      for (const message of finalMessages) {
+        eventCount++;
+        console.log(`[DEBUG] Final message ${eventCount}`);
+        const event = this.parseEventFromMessage(message);
+        if (event) {
+          console.log(`[DEBUG] Final event ${eventCount}:`, JSON.stringify(event, null, 2));
+          yield event;
         }
       }
     } finally {
       reader.releaseLock();
       console.log('[DEBUG] Stream reader released');
+      console.log(`[DEBUG] Iteration complete. Received ${eventCount} events total`);
+    }
+  }
+
+  private parseEventFromMessage(message: any): CodeWhispererEvent | null {
+    const headers = message.headers;
+    const messageType = headers[':message-type']?.value;
+    const eventType = headers[':event-type']?.value;
+
+    if (messageType === 'exception') {
+      console.error('[DEBUG] Received exception event:', toUtf8(message.body));
+      return null;
+    }
+
+    if (messageType !== 'event') {
+      console.log(`[DEBUG] Skipping message with type: ${messageType}`);
+      return null;
+    }
+
+    // Parse the body as JSON
+    const bodyText = toUtf8(message.body);
+    let bodyData: any = {};
+    
+    if (bodyText) {
+      try {
+        bodyData = JSON.parse(bodyText);
+      } catch (error) {
+        console.error('[DEBUG] Failed to parse message body:', bodyText, error);
+        return null;
+      }
+    }
+
+    // Map event types to the expected format
+    switch (eventType) {
+      case 'initial-response':
+        return { messageMetadataEvent: bodyData };
+      case 'assistantResponseEvent':
+        return { assistantResponseEvent: bodyData };
+      case 'codeEvent':
+        return { codeEvent: bodyData };
+      case 'toolUseEvent':
+        return { toolUseEvent: bodyData };
+      case 'invalidStateEvent':
+        return { invalidStateEvent: bodyData };
+      default:
+        console.log(`[DEBUG] Unknown event type: ${eventType}`);
+        return null;
     }
   }
 
