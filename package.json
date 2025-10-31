@@ -1,0 +1,31 @@
+{
+  "name": "codewhisperer-openai-proxy",
+  "version": "1.0.0",
+  "description": "CodeWhisperer API client and OpenAI protocol proxy",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/proxy-server.js",
+    "dev": "tsx src/proxy-server.ts",
+    "cli": "tsx src/cli.ts"
+  },
+  "keywords": [
+    "codewhisperer",
+    "openai",
+    "proxy",
+    "aws"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@aws-sdk/client-sso-oidc": "^3.682.0",
+    "express": "^4.21.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.8.6",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
