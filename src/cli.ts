@@ -30,6 +30,8 @@ async function main() {
     console.log(`\nQuestion: ${question}\n`);
 
     console.log('Response:');
+    console.log('[DEBUG] Starting to iterate over events...');
+    let eventCounter = 0;
     for await (const event of client.generateAssistantResponse({
       conversationState: {
         currentMessage: {
@@ -41,17 +43,26 @@ async function main() {
         chatTriggerType: 'MANUAL',
       },
     })) {
+      eventCounter++;
+      console.log(`[DEBUG] CLI received event ${eventCounter}:`, JSON.stringify(event, null, 2));
+      
       if ('assistantResponseEvent' in event) {
+        console.log('[DEBUG] Processing assistantResponseEvent');
         process.stdout.write(event.assistantResponseEvent.content);
       } else if ('codeEvent' in event) {
+        console.log('[DEBUG] Processing codeEvent');
         process.stdout.write(event.codeEvent.content);
       } else if ('messageMetadataEvent' in event) {
+        console.log('[DEBUG] Processing messageMetadataEvent');
         console.log(
           '\n\n[Metadata]',
           JSON.stringify(event.messageMetadataEvent, null, 2)
         );
+      } else {
+        console.log('[DEBUG] Unknown event type:', Object.keys(event));
       }
     }
+    console.log(`[DEBUG] Iteration complete. Received ${eventCounter} events total`);
     console.log('\n');
   } else {
     console.log('Usage:');

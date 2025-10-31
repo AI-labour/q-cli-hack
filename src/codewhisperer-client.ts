@@ -33,17 +33,23 @@ export class CodeWhispererClient {
       body: JSON.stringify(request),
     });
 
+    console.log('[DEBUG] Response status:', response.status, response.statusText);
+    console.log('[DEBUG] Response headers:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('[DEBUG] Error response body:', errorText);
       throw new Error(
         `CodeWhisperer API error: ${response.status} ${response.statusText}\n${errorText}`
       );
     }
 
     if (!response.body) {
+      console.error('[DEBUG] Response body is null');
       throw new Error('Response body is null');
     }
 
+    console.log('[DEBUG] Starting to parse event stream...');
     yield* this.parseEventStream(response.body);
   }
 
@@ -53,14 +59,24 @@ export class CodeWhispererClient {
     const reader = body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let chunkCount = 0;
+    let eventCount = 0;
 
     try {
       while (true) {
         const { done, value } = await reader.read();
 
-        if (done) break;
+        if (done) {
+          console.log(`[DEBUG] Stream ended. Received ${chunkCount} chunks, parsed ${eventCount} events`);
+          break;
+        }
 
-        buffer += decoder.decode(value, { stream: true });
+        chunkCount++;
+        const chunk = decoder.decode(value, { stream: true });
+        console.log(`[DEBUG] Received chunk ${chunkCount}, size: ${chunk.length} bytes`);
+        console.log(`[DEBUG] Chunk content:`, chunk.substring(0, 200) + (chunk.length > 200 ? '...' : ''));
+        
+        buffer += chunk;
 
         const lines = buffer.split('\n');
         buffer = lines.pop() || '';
@@ -68,31 +84,41 @@ export class CodeWhispererClient {
         for (const line of lines) {
           if (line.trim() === '') continue;
 
+          console.log(`[DEBUG] Processing line: ${line.substring(0, 100)}${line.length > 100 ? '...' : ''}`);
+
           if (line.startsWith('data: ')) {
             const data = line.slice(6);
             try {
               const event = JSON.parse(data);
+              eventCount++;
+              console.log(`[DEBUG] Parsed event ${eventCount}:`, JSON.stringify(event, null, 2));
               yield event;
             } catch (error) {
-              console.error('Failed to parse event:', data, error);
+              console.error('[DEBUG] Failed to parse event:', data, error);
             }
+          } else {
+            console.log(`[DEBUG] Line does not start with "data: ": ${line.substring(0, 50)}`);
           }
         }
       }
 
       if (buffer.trim()) {
+        console.log(`[DEBUG] Processing remaining buffer: ${buffer.substring(0, 100)}${buffer.length > 100 ? '...' : ''}`);
         if (buffer.startsWith('data: ')) {
           const data = buffer.slice(6);
           try {
             const event = JSON.parse(data);
+            eventCount++;
+            console.log(`[DEBUG] Parsed final event ${eventCount}:`, JSON.stringify(event, null, 2));
             yield event;
           } catch (error) {
-            console.error('Failed to parse final event:', data, error);
+            console.error('[DEBUG] Failed to parse final event:', data, error);
           }
         }
       }
     } finally {
       reader.releaseLock();
+      console.log('[DEBUG] Stream reader released');
     }
   }
 
