@@ -27,7 +27,7 @@ async function main() {
           origin: 'CLI',
         },
       },
-      chatTriggerType: 'Manual',
+      chatTriggerType: 'MANUAL',
     },
   })) {
     if ('assistantResponseEvent' in event) {
@@ -50,7 +50,7 @@ async function main() {
           origin: 'CLI',
         },
       },
-      chatTriggerType: 'Manual',
+      chatTriggerType: 'MANUAL',
     },
   });
 

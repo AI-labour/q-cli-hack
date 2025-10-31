@@ -68,7 +68,7 @@ async function main() {
           },
         },
       },
-      chatTriggerType: 'Manual',
+      chatTriggerType: 'MANUAL',
     },
   });
 
@@ -141,7 +141,7 @@ async function main() {
             },
           },
         },
-        chatTriggerType: 'Manual',
+        chatTriggerType: 'MANUAL',
         history: history,
       },
     });
