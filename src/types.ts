@@ -106,7 +106,7 @@ export type ChatMessage =
 export interface ConversationState {
   conversationId?: string;
   currentMessage: ChatMessage;
-  chatTriggerType: 'Manual';
+  chatTriggerType: 'MANUAL' | 'DIAGNOSTIC' | 'INLINE_CHAT';
   history?: ChatMessage[];
 }
 

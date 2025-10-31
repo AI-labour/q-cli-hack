@@ -204,7 +204,7 @@ export class OpenAIToCodeWhispererConverter {
     const conversationState: ConversationState = {
       conversationId: this.conversationId,
       currentMessage,
-      chatTriggerType: 'Manual',
+      chatTriggerType: 'MANUAL',
       history: history.length > 0 ? history : undefined,
     };
 

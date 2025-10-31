@@ -19,6 +19,9 @@ export class CodeWhispererClient {
   ): AsyncGenerator<CodeWhispererEvent> {
     const token = await this.config.tokenProvider();
 
+    // Log the request for debugging
+    console.log('[DEBUG] Request body:', JSON.stringify(request, null, 2));
+
     const response = await fetch(this.endpoint, {
       method: 'POST',
       headers: {
