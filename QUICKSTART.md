@@ -173,13 +173,27 @@ curl -N -X POST http://localhost:3000/v1/chat/completions \
 
 ## 故障排查
 
-### 问题：认证失败
+### 问题：认证失败 / 403 AccessDeniedException
+
+**现象：**
+```
+Error: CodeWhisperer API error: 403 Forbidden
+AccessDeniedException: User is not authorized to make this call.
+```
 
 **解决方案：**
 ```bash
+# 清理旧的认证信息（重要！）
 rm -rf ~/.codewhisperer-proxy
+
+# 重新登录以获取新的权限范围
 npm run cli login
+
+# 测试
+npm run cli test "Hello"
 ```
+
+**说明：** 新版本添加了 `codewhisperer:conversations` 权限范围，旧的认证令牌不包含此权限，需要重新登录。详见 [FIX_403_ERROR.md](./FIX_403_ERROR.md)。
 
 ### 问题：无法连接到服务器
 
@@ -205,6 +219,7 @@ npm run cli login
 查看服务器日志以获取详细错误信息。常见错误代码：
 
 - **401**: Token 无效 → 重新登录
+- **403**: 权限不足 → 清理并重新登录（见上方）
 - **429**: 请求过多 → 等待一段时间
 - **500**: 服务器错误 → 查看日志
 
