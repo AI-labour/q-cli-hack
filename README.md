@@ -266,6 +266,28 @@ for await (const event of client.generateAssistantResponse({
 3. 某些 OpenAI 特定的参数（如 temperature）可能不被支持
 4. 工具调用的格式需要符合 CodeWhisperer 的要求
 
+## 故障排查
+
+### 403 AccessDeniedException 错误
+
+如果遇到 `403 Forbidden` 或 `AccessDeniedException` 错误：
+
+```bash
+# 清理旧的认证信息
+rm -rf ~/.codewhisperer-proxy
+
+# 重新登录
+npm run cli login
+```
+
+详细说明请参阅 [FIX_403_ERROR.md](./FIX_403_ERROR.md)。
+
+### 其他常见问题
+
+- **Token 过期**：Token 会自动刷新，如遇问题请重新登录
+- **无法连接**：检查网络连接和 AWS 服务状态
+- **API 错误**：查看错误日志，确认账户权限和配额
+
 ## License
 
 MIT

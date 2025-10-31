@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.0.1] - 2024-10-31
+
+### 已修复
+- 🐛 修复 403 AccessDeniedException 错误
+  - 添加 `codewhisperer:conversations` scope 以支持聊天/对话功能
+  - 更新 `src/auth.ts` 中的 SCOPES 配置
+  - 添加详细的故障排查文档 `FIX_403_ERROR.md`
+  - 更新 `README.md` 和 `QUICKSTART.md` 的故障排查部分
+
+### 升级说明
+如果从 v1.0.0 升级，需要重新登录以获取新的权限范围：
+```bash
+rm -rf ~/.codewhisperer-proxy
+npm run cli login
+```
+
+---
+
 ## [1.0.0] - 2024-10-31
 
 ### 初始版本

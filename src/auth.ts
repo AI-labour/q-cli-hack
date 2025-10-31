@@ -16,7 +16,7 @@ import type {
 
 const OIDC_REGION = 'us-east-1';
 const START_URL = 'https://view.awsapps.com/start';
-const SCOPES = ['codewhisperer:completions', 'codewhisperer:analysis'];
+const SCOPES = ['codewhisperer:completions', 'codewhisperer:analysis', 'codewhisperer:conversations'];
 const CLIENT_NAME = 'codewhisperer-openai-proxy';
 
 const CONFIG_DIR = join(homedir(), '.codewhisperer-proxy');
