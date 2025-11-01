@@ -1,80 +1,187 @@
-# 快速上手指南
+# Quick Start Guide
 
-## 5 分钟快速开始
+Get up and running with CodeWhisperer OpenAI Proxy in 5 minutes!
 
-### 步骤 1: 安装
+## Prerequisites
 
+- Node.js 18 or higher
+- npm or yarn
+- An AWS Builder ID account (free to create)
+
+## Installation
+
+1. Clone the repository:
 ```bash
 git clone <repository-url>
 cd codewhisperer-openai-proxy
+```
+
+2. Install dependencies:
+```bash
 npm install
 ```
 
-### 步骤 2: 认证
+## First Time Setup
 
-```bash
-npm run cli login
-```
-
-这将打开一个浏览器窗口，请使用你的 AWS Builder ID 登录。
-
-如果没有 AWS Builder ID，访问 https://aws.amazon.com/builder-id/ 创建一个（免费）。
-
-### 步骤 3: 测试
-
-```bash
-npm run cli test "写一个 Python 快速排序"
-```
-
-### 步骤 4: 启动服务器
-
+1. Start the server:
 ```bash
 npm run dev
 ```
 
-服务器现在运行在 `http://localhost:3000`
+2. You'll see an authentication prompt. Open the link in your browser:
+```
+=== AWS Builder ID Authentication ===
 
-### 步骤 5: 测试 API
+Please visit: https://device.sso.us-east-1.amazonaws.com/?user_code=XXXX-XXXX
+
+Or go to: https://device.sso.us-east-1.amazonaws.com/
+And enter code: XXXX-XXXX
+```
+
+3. Sign in with your AWS Builder ID (create one if you don't have it)
+
+4. Once authenticated, the server will start:
+```
+✓ Authentication successful!
+
+=== CodeWhisperer OpenAI Proxy Server ===
+Server listening on http://localhost:3000
+
+Endpoints:
+  POST /v1/chat/completions
+  GET  /v1/models
+  GET  /health
+```
+
+## Your First Request
+
+### Using curl
 
 ```bash
-curl -X POST http://localhost:3000/v1/chat/completions \
+curl http://localhost:3000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "codewhisperer",
     "messages": [
-      {"role": "user", "content": "解释什么是递归"}
+      {"role": "user", "content": "Write a hello world function in Python"}
     ],
     "stream": false
   }'
 ```
 
-## 与现有工具集成
+### Using Python
 
-### OpenAI Python SDK
+Create a file `test.py`:
 
 ```python
 from openai import OpenAI
 
 client = OpenAI(
     base_url="http://localhost:3000/v1",
-    api_key="any"  # 可以是任意字符串
+    api_key="dummy"
 )
 
 response = client.chat.completions.create(
     model="codewhisperer",
     messages=[
-        {"role": "user", "content": "Hello!"}
+        {"role": "user", "content": "Write a hello world function in Python"}
     ]
 )
 
 print(response.choices[0].message.content)
 ```
 
-### Continue (VSCode 扩展)
+Run it:
+```bash
+python test.py
+```
 
-1. 安装 Continue 扩展
-2. 打开设置 (config.json)
-3. 添加配置：
+### Using JavaScript/TypeScript
+
+Create a file `test.js`:
+
+```javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: 'http://localhost:3000/v1',
+  apiKey: 'dummy',
+});
+
+const response = await client.chat.completions.create({
+  model: 'codewhisperer',
+  messages: [
+    { role: 'user', content: 'Write a hello world function in Python' }
+  ],
+});
+
+console.log(response.choices[0].message.content);
+```
+
+Run it:
+```bash
+node test.js
+```
+
+## Streaming Example
+
+### Python with Streaming
+
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:3000/v1",
+    api_key="dummy"
+)
+
+response = client.chat.completions.create(
+    model="codewhisperer",
+    messages=[
+        {"role": "user", "content": "Write a Python function to calculate fibonacci numbers"}
+    ],
+    stream=True
+)
+
+for chunk in response:
+    if chunk.choices[0].delta.content:
+        print(chunk.choices[0].delta.content, end="", flush=True)
+print()
+```
+
+### JavaScript with Streaming
+
+```javascript
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: 'http://localhost:3000/v1',
+  apiKey: 'dummy',
+});
+
+const response = await client.chat.completions.create({
+  model: 'codewhisperer',
+  messages: [
+    { role: 'user', content: 'Write a Python function to calculate fibonacci numbers' }
+  ],
+  stream: true,
+});
+
+for await (const chunk of response) {
+  process.stdout.write(chunk.choices[0]?.delta?.content || '');
+}
+console.log();
+```
+
+## Using with Continue.dev
+
+Continue.dev is a popular VS Code / JetBrains extension for AI coding assistance.
+
+1. Install the Continue extension in VS Code
+
+2. Open Continue settings (click the gear icon)
+
+3. Add this configuration:
 
 ```json
 {
@@ -84,218 +191,125 @@ print(response.choices[0].message.content)
       "provider": "openai",
       "model": "codewhisperer",
       "apiBase": "http://localhost:3000/v1",
-      "apiKey": "any"
+      "apiKey": "dummy"
     }
   ]
 }
 ```
 
-### Open WebUI
+4. Select "CodeWhisperer" as your model
 
-1. 打开 Open WebUI 设置
-2. 添加 OpenAI API 连接：
+## Using with Cursor IDE
+
+Cursor is a fork of VS Code with built-in AI features.
+
+1. Open Cursor Settings (Ctrl+,)
+
+2. Search for "API Key"
+
+3. Set up OpenAI API:
+   - API Key: `dummy`
    - API URL: `http://localhost:3000/v1`
-   - API Key: `any`
-3. 选择模型 `codewhisperer`
-
-### Cursor
-
-1. 打开 Cursor 设置
-2. 选择 "OpenAI API"
-3. 设置：
-   - Base URL: `http://localhost:3000/v1`
-   - API Key: `any`
    - Model: `codewhisperer`
 
-## 常见用例
+## Conversation Context
 
-### 代码生成
+The proxy maintains conversation history automatically:
 
-```bash
-curl -X POST http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "codewhisperer",
-    "messages": [
-      {
-        "role": "user", 
-        "content": "用 Python 写一个二叉树的中序遍历"
-      }
+```python
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="http://localhost:3000/v1",
+    api_key="dummy"
+)
+
+# First message
+response1 = client.chat.completions.create(
+    model="codewhisperer",
+    messages=[
+        {"role": "user", "content": "Write a Python function to add two numbers"}
     ]
-  }'
-```
+)
 
-### 代码解释
+print(response1.choices[0].message.content)
 
-```bash
-curl -X POST http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "codewhisperer",
-    "messages": [
-      {
-        "role": "user",
-        "content": "解释这段代码：\n```python\ndef quicksort(arr):\n    if len(arr) <= 1:\n        return arr\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n    return quicksort(left) + middle + quicksort(right)\n```"
-      }
+# Follow-up message with history
+response2 = client.chat.completions.create(
+    model="codewhisperer",
+    messages=[
+        {"role": "user", "content": "Write a Python function to add two numbers"},
+        {"role": "assistant", "content": response1.choices[0].message.content},
+        {"role": "user", "content": "Now modify it to add three numbers"}
     ]
-  }'
+)
+
+print(response2.choices[0].message.content)
 ```
 
-### 代码审查
+## Troubleshooting
+
+### "No valid token" error
+
+Your authentication has expired. Delete the token and re-authenticate:
 
 ```bash
-curl -X POST http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "codewhisperer",
-    "messages": [
-      {
-        "role": "user",
-        "content": "审查这段代码，找出潜在的问题：\n```javascript\nfunction fetchData(url) {\n  const data = fetch(url);\n  return data.json();\n}\n```"
-      }
-    ]
-  }'
-```
-
-### 流式响应
-
-```bash
-curl -N -X POST http://localhost:3000/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "codewhisperer",
-    "messages": [
-      {"role": "user", "content": "写一个 README 文件的模板"}
-    ],
-    "stream": true
-  }'
-```
-
-## 故障排查
-
-### 问题：认证失败 / 403 AccessDeniedException
-
-**现象：**
-```
-Error: CodeWhisperer API error: 403 Forbidden
-AccessDeniedException: User is not authorized to make this call.
-```
-
-**解决方案：**
-```bash
-# 清理旧的认证信息（重要！）
 rm -rf ~/.codewhisperer-proxy
-
-# 重新登录以获取新的权限范围
-npm run cli login
-
-# 测试
-npm run cli test "Hello"
+npm run dev
 ```
 
-**说明：** 新版本添加了 `codewhisperer:conversations` 权限范围，旧的认证令牌不包含此权限，需要重新登录。详见 [FIX_403_ERROR.md](./FIX_403_ERROR.md)。
+### Connection refused
 
-### 问题：无法连接到服务器
+Make sure the server is running:
 
-**检查：**
-```bash
-curl http://localhost:3000/health
-```
-
-如果失败，确保服务器正在运行：
 ```bash
 npm run dev
 ```
 
-### 问题：Token 过期
+### Empty responses
 
-Token 会自动刷新。如果遇到问题，重新登录：
-```bash
-npm run cli login
-```
+Check the server logs for errors. Common issues:
+- Network connectivity problems
+- AWS service outage
+- Invalid request format
 
-### 问题：API 返回错误
+## Next Steps
 
-查看服务器日志以获取详细错误信息。常见错误代码：
+- Read the full [README.md](README.md) for more features
+- Check out the [CodeWhisperer Streaming Client Guide](docs/codewhisperer-streaming-client-guide.md)
+- Explore the [examples](examples/) directory
 
-- **401**: Token 无效 → 重新登录
-- **403**: 权限不足 → 清理并重新登录（见上方）
-- **429**: 请求过多 → 等待一段时间
-- **500**: 服务器错误 → 查看日志
+## Getting Help
 
-## 下一步
+- Check the server logs for detailed error messages
+- Review the documentation in the `docs/` directory
+- Open an issue on GitHub if you encounter problems
 
-- 📖 阅读 [完整文档](./README.md)
-- 🔍 了解 [API 分析](./ANALYSIS.md)
-- 🚀 查看 [部署指南](./DEPLOYMENT.md)
-- 💡 浏览 [使用示例](./examples/)
-- 📊 查看 [项目总结](./SUMMARY.md)
+## Production Deployment
 
-## 获取帮助
+For production use:
 
-如果遇到问题：
-
-1. 检查日志输出
-2. 查阅文档
-3. 提交 Issue（包含错误日志）
-
-## 限制
-
-- 需要 AWS Builder ID 账户
-- 可能存在速率限制
-- 某些高级功能可能不可用（取决于账户类型）
-
-## 提示和技巧
-
-### 提示 1: 使用环境变量
-
-```bash
-export PORT=8080
-npm run dev
-```
-
-### 提示 2: 多实例部署
-
-在不同端口运行多个实例：
-
-```bash
-# 终端 1
-PORT=3001 npm run dev
-
-# 终端 2
-PORT=3002 npm run dev
-```
-
-### 提示 3: 后台运行
-
+1. Build the project:
 ```bash
 npm run build
-nohup node dist/proxy-server.js > server.log 2>&1 &
 ```
 
-### 提示 4: 使用 PM2
+2. Set environment variables:
+```bash
+export PORT=3000
+```
 
+3. Run the production server:
+```bash
+npm start
+```
+
+4. Consider using a process manager like PM2:
 ```bash
 npm install -g pm2
 pm2 start dist/proxy-server.js --name codewhisperer-proxy
-pm2 logs codewhisperer-proxy
 ```
 
-### 提示 5: Docker 快速启动
+5. Set up HTTPS with a reverse proxy (nginx, caddy, etc.)
 
-```bash
-docker build -t cw-proxy .
-docker run -d -p 3000:3000 -v ~/.codewhisperer-proxy:/root/.codewhisperer-proxy cw-proxy
-```
-
-## 性能建议
-
-对于生产使用：
-
-1. 启用 HTTPS
-2. 添加速率限制
-3. 设置监控
-4. 使用反向代理（Nginx/Caddy）
-5. 考虑负载均衡
-
-详见 [部署指南](./DEPLOYMENT.md)。
+Happy coding! 🚀

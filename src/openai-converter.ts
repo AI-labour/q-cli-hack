@@ -1,13 +1,11 @@
 import type {
+  SendMessageCommandInput,
   ConversationState,
   ChatMessage,
-  UserInputMessage,
-  AssistantResponseMessage,
+  ChatResponseStream,
   Tool,
   ToolResult,
-  GenerateAssistantResponseRequest,
-  CodeWhispererEvent,
-} from './types.js';
+} from '@aws/codewhisperer-streaming-client';
 
 export interface OpenAIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
@@ -100,7 +98,7 @@ export class OpenAIToCodeWhispererConverter {
 
   convertToCodeWhispererRequest(
     request: OpenAIChatCompletionRequest
-  ): GenerateAssistantResponseRequest {
+  ): SendMessageCommandInput {
     const messages = request.messages;
     const tools = request.tools;
 
@@ -123,19 +121,19 @@ export class OpenAIToCodeWhispererConverter {
       const msg = nonSystemMessages[i];
 
       if (msg.role === 'user') {
-        const userMsg: UserInputMessage = {
-          content: msg.content || '',
-          origin: 'CHAT',
-        };
-        history.push({ userInputMessage: userMsg });
+        history.push({
+          userInputMessage: {
+            content: msg.content || '',
+          },
+        });
       } else if (msg.role === 'assistant') {
-        const assistantMsg: AssistantResponseMessage = {
+        const assistantMsg: ChatMessage['assistantResponseMessage'] = {
           content: msg.content || '',
         };
 
         if (msg.tool_calls && msg.tool_calls.length > 0) {
-          assistantMsg.tool_uses = msg.tool_calls.map((tc) => ({
-            tool_use_id: tc.id,
+          assistantMsg.toolUses = msg.tool_calls.map((tc) => ({
+            toolUseId: tc.id,
             name: tc.function.name,
             input: JSON.parse(tc.function.arguments),
           }));
@@ -144,9 +142,9 @@ export class OpenAIToCodeWhispererConverter {
         history.push({ assistantResponseMessage: assistantMsg });
       } else if (msg.role === 'tool') {
         toolResults.push({
-          tool_use_id: msg.tool_call_id!,
+          toolUseId: msg.tool_call_id!,
           content: [{ text: msg.content || '' }],
-          status: 'Success',
+          status: 'success',
         });
       }
     }
@@ -155,7 +153,7 @@ export class OpenAIToCodeWhispererConverter {
       toolSpecification: {
         name: t.function.name,
         description: t.function.description || '',
-        input_schema: {
+        inputSchema: {
           json: t.function.parameters || {},
         },
       },
@@ -168,35 +166,33 @@ export class OpenAIToCodeWhispererConverter {
 
     if (lastMessage.role === 'tool') {
       toolResults.push({
-        tool_use_id: lastMessage.tool_call_id!,
+        toolUseId: lastMessage.tool_call_id!,
         content: [{ text: lastMessage.content || '' }],
-        status: 'Success',
+        status: 'success',
       });
 
       currentMessage = {
         userInputMessage: {
           content: '',
-          origin: 'CHAT',
-          user_input_message_context: {
-            tool_results: toolResults,
+          userInputMessageContext: {
+            toolResults,
             tools: cwTools,
           },
-          model_id: request.model,
+          modelId: request.model,
         },
       };
     } else {
       currentMessage = {
         userInputMessage: {
           content: userContent,
-          origin: 'CHAT',
-          user_input_message_context:
+          userInputMessageContext:
             cwTools || toolResults.length > 0
               ? {
                   tools: cwTools,
-                  tool_results: toolResults.length > 0 ? toolResults : undefined,
+                  toolResults: toolResults.length > 0 ? toolResults : undefined,
                 }
               : undefined,
-          model_id: request.model,
+          modelId: request.model,
         },
       };
     }
@@ -214,29 +210,28 @@ export class OpenAIToCodeWhispererConverter {
   }
 
   async *convertToOpenAIStreamingResponse(
-    events: AsyncGenerator<CodeWhispererEvent>,
+    events: AsyncGenerator<ChatResponseStream>,
     model: string,
     requestId: string
   ): AsyncGenerator<OpenAIChatCompletionChunk> {
     const created = Math.floor(Date.now() / 1000);
     let hasStarted = false;
-    const toolCallBuffers = new Map<string, { name: string; arguments: string }>();
-    const toolCallIndices = new Map<string, number>();
-    let nextToolCallIndex = 0;
 
     for await (const event of events) {
-      if ('messageMetadataEvent' in event) {
-        if (event.messageMetadataEvent.conversation_id) {
-          this.conversationId = event.messageMetadataEvent.conversation_id;
+      if ('messageMetadataEvent' in event && event.messageMetadataEvent) {
+        if (event.messageMetadataEvent.conversationId) {
+          this.conversationId = event.messageMetadataEvent.conversationId;
         }
         continue;
       }
 
       if ('assistantResponseEvent' in event || 'codeEvent' in event) {
         const content =
-          'assistantResponseEvent' in event
+          'assistantResponseEvent' in event && event.assistantResponseEvent
             ? event.assistantResponseEvent.content
-            : event.codeEvent.content;
+            : 'codeEvent' in event && event.codeEvent
+            ? event.codeEvent.content
+            : '';
 
         if (!hasStarted) {
           yield {
@@ -263,79 +258,14 @@ export class OpenAIToCodeWhispererConverter {
           choices: [
             {
               index: 0,
-              delta: { content },
+              delta: { content: content || '' },
               finish_reason: null,
             },
           ],
         };
-      } else if ('toolUseEvent' in event) {
-        const toolEvent = event.toolUseEvent;
-
-        if (!toolCallIndices.has(toolEvent.tool_use_id)) {
-          toolCallIndices.set(toolEvent.tool_use_id, nextToolCallIndex++);
-
-          yield {
-            id: requestId,
-            object: 'chat.completion.chunk',
-            created,
-            model,
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  tool_calls: [
-                    {
-                      index: toolCallIndices.get(toolEvent.tool_use_id)!,
-                      id: toolEvent.tool_use_id,
-                      type: 'function',
-                      function: {
-                        name: toolEvent.name,
-                        arguments: '',
-                      },
-                    },
-                  ],
-                },
-                finish_reason: null,
-              },
-            ],
-          };
-
-          toolCallBuffers.set(toolEvent.tool_use_id, {
-            name: toolEvent.name,
-            arguments: '',
-          });
-        }
-
-        if (toolEvent.input) {
-          const buffer = toolCallBuffers.get(toolEvent.tool_use_id)!;
-          buffer.arguments += toolEvent.input;
-
-          yield {
-            id: requestId,
-            object: 'chat.completion.chunk',
-            created,
-            model,
-            choices: [
-              {
-                index: 0,
-                delta: {
-                  tool_calls: [
-                    {
-                      index: toolCallIndices.get(toolEvent.tool_use_id)!,
-                      function: {
-                        arguments: toolEvent.input,
-                      },
-                    },
-                  ],
-                },
-                finish_reason: null,
-              },
-            ],
-          };
-        }
-      } else if ('invalidStateEvent' in event) {
+      } else if ('invalidStateEvent' in event && event.invalidStateEvent) {
         throw new Error(
-          `Invalid state: ${event.invalidStateEvent.reason} - ${event.invalidStateEvent.message}`
+          `Invalid state: ${event.invalidStateEvent.reason || 'unknown'} - ${event.invalidStateEvent.message || 'no message'}`
         );
       }
     }
@@ -358,7 +288,6 @@ export class OpenAIToCodeWhispererConverter {
   convertToOpenAINonStreamingResponse(
     result: {
       content: string;
-      toolUses: Array<{ tool_use_id: string; name: string; input: any }>;
       conversationId?: string;
     },
     model: string,
@@ -370,22 +299,6 @@ export class OpenAIToCodeWhispererConverter {
 
     const created = Math.floor(Date.now() / 1000);
 
-    const message: OpenAIChatCompletionResponse['choices'][0]['message'] = {
-      role: 'assistant',
-      content: result.content || null,
-    };
-
-    if (result.toolUses.length > 0) {
-      message.tool_calls = result.toolUses.map((tu) => ({
-        id: tu.tool_use_id,
-        type: 'function',
-        function: {
-          name: tu.name,
-          arguments: JSON.stringify(tu.input),
-        },
-      }));
-    }
-
     return {
       id: requestId,
       object: 'chat.completion',
@@ -394,7 +307,10 @@ export class OpenAIToCodeWhispererConverter {
       choices: [
         {
           index: 0,
-          message,
+          message: {
+            role: 'assistant',
+            content: result.content || null,
+          },
           finish_reason: 'stop',
         },
       ],

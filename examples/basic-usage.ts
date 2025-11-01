@@ -19,21 +19,20 @@ async function main() {
   console.log('Question: What is TypeScript?\n');
   console.log('Response:');
 
-  for await (const event of client.generateAssistantResponse({
+  for await (const event of client.sendMessage({
     conversationState: {
       currentMessage: {
         userInputMessage: {
           content: 'What is TypeScript? Give me a brief explanation.',
-          origin: 'CLI',
         },
       },
       chatTriggerType: 'MANUAL',
     },
   })) {
-    if ('assistantResponseEvent' in event) {
-      process.stdout.write(event.assistantResponseEvent.content);
-    } else if ('codeEvent' in event) {
-      process.stdout.write(event.codeEvent.content);
+    if ('assistantResponseEvent' in event && event.assistantResponseEvent) {
+      process.stdout.write(event.assistantResponseEvent.content || '');
+    } else if ('codeEvent' in event && event.codeEvent) {
+      process.stdout.write(event.codeEvent.content || '');
     }
   }
 
@@ -42,12 +41,11 @@ async function main() {
   console.log('Non-streaming example:');
   console.log('Question: Write a bubble sort in Python\n');
 
-  const result = await client.generateAssistantResponseNonStreaming({
+  const result = await client.sendMessageNonStreaming({
     conversationState: {
       currentMessage: {
         userInputMessage: {
           content: 'Write a bubble sort algorithm in Python',
-          origin: 'CLI',
         },
       },
       chatTriggerType: 'MANUAL',

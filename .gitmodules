@@ -1,3 +1,0 @@
-[submodule "amazon-q-developer-cli"]
-	path = amazon-q-developer-cli
-	url = https://github.com/aws/amazon-q-developer-cli.git
