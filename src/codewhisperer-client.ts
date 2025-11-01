@@ -1,9 +1,16 @@
 import {
   CodeWhispererStreamingClient,
   SendMessageCommand,
+  GenerateAssistantResponseCommand,
   type SendMessageCommandInput,
+  type GenerateAssistantResponseCommandInput,
   type ChatResponseStream,
 } from '@aws/codewhisperer-streaming-client';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
+import { HttpsProxyAgent } from 'hpagent';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import type { TokenProvider } from './types.js';
 
 export interface CodeWhispererClientConfig {
@@ -19,13 +26,32 @@ export class CodeWhispererClient {
   constructor(config: CodeWhispererClientConfig) {
     this.tokenProvider = config.tokenProvider;
 
+    const proxyAgent = (() => {
+      const proxyUrl = process.env.https_proxy || process.env.HTTPS_PROXY;
+      if (!proxyUrl) {
+        return undefined;
+      }
+
+      const caPath = path.join(os.homedir(), '.mitmproxy', 'mitmproxy-ca-cert.pem');
+      const ca = fs.existsSync(caPath) ? fs.readFileSync(caPath) : undefined;
+
+      return new HttpsProxyAgent({
+        proxy: proxyUrl,
+        ca,
+      });
+    })();
+
     this.client = new CodeWhispererStreamingClient({
       region: config.region || 'us-east-1',
-      endpoint: config.endpoint,
+      endpoint: config.endpoint || 'https://q.us-east-1.amazonaws.com',
       token: async () => {
         const token = await this.tokenProvider();
         return { token };
       },
+      requestHandler: proxyAgent ? new NodeHttpHandler({
+        httpAgent: proxyAgent,
+        httpsAgent: proxyAgent,
+      }) : undefined,
     });
   }
 
@@ -40,6 +66,23 @@ export class CodeWhispererClient {
     }
 
     for await (const event of response.sendMessageResponse) {
+      yield event;
+    }
+  }
+
+  async *generateAssistantResponse(
+    request: GenerateAssistantResponseCommandInput
+  ): AsyncGenerator<ChatResponseStream> {
+    const command = new GenerateAssistantResponseCommand(request);
+    const response = await this.client.send(command);
+
+    if (!response.generateAssistantResponseResponse) {
+      throw new Error('No response from CodeWhisperer for GenerateAssistantResponse');
+    }
+
+    // The response is an async iterable, so we can iterate over it.
+    // The actual type of the events is a union of all possible event shapes.
+    for await (const event of response.generateAssistantResponseResponse) {
       yield event;
     }
   }

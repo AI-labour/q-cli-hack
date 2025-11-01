@@ -19,13 +19,16 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@aws/codewhisperer-streaming-client": "^1.0.26",
     "@aws-sdk/client-sso-oidc": "^3.682.0",
-    "express": "^4.21.1"
+    "@aws/codewhisperer-streaming-client": "^1.0.26",
+    "@smithy/node-http-handler": "^4.4.4",
+    "express": "^4.21.1",
+    "hpagent": "^1.2.0"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
     "@types/node": "^22.8.6",
+    "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
