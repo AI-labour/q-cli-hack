@@ -44,8 +44,14 @@ This is a complete rewrite of the project using the official `@aws/codewhisperer
 ### Documentation
 
 - Added `docs/codewhisperer-streaming-client-guide.md` - comprehensive guide to the AWS client
+- Added `REFERENCE_MATERIALS.md` - guide to using reference materials
 - Updated README.md with new architecture
-- Removed obsolete documentation files
+- **Preserved** important reference materials:
+  - `ANALYSIS.md` - CodeWhisperer protocol analysis
+  - `AMAZON_Q_CLI_INTEGRATION.md` - Integration guide
+  - `amazon-q-developer-cli/` - AWS official CLI source (submodule)
+  - `docs/amazon-q-cli-analysis/` - Detailed CLI analysis
+- Removed obsolete temporary documentation files
 
 ### Technical Details
 

@@ -209,7 +209,19 @@ Authentication tokens are stored in `~/.codewhisperer-proxy/`:
 
 ## Documentation
 
+### Main Documentation
 - [CodeWhisperer Streaming Client Guide](docs/codewhisperer-streaming-client-guide.md) - Comprehensive guide to the AWS client library
+- [Quick Start Guide](QUICKSTART.md) - Get started in 5 minutes
+- [Changelog](CHANGELOG.md) - Version history and changes
+
+### Reference Materials
+
+See [REFERENCE_MATERIALS.md](REFERENCE_MATERIALS.md) for details on how to use these materials.
+
+- [ANALYSIS.md](ANALYSIS.md) - In-depth technical analysis of CodeWhisperer protocol
+- [AMAZON_Q_CLI_INTEGRATION.md](AMAZON_Q_CLI_INTEGRATION.md) - Integration with Amazon Q Developer CLI
+- [amazon-q-developer-cli/](amazon-q-developer-cli/) - AWS's official CLI source code (submodule, for reference)
+- [Amazon Q CLI Analysis](docs/amazon-q-cli-analysis/) - Detailed analysis of the official CLI codebase
 
 ## Conversation Management
 

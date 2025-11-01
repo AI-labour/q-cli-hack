@@ -39,9 +39,7 @@ This document summarizes the major refactoring completed on 2024-11-01 to use th
 
 ### Removed Files
 
-Documentation files that became obsolete:
-- `AMAZON_Q_CLI_INTEGRATION.md`
-- `ANALYSIS.md`
+Temporary documentation files that became obsolete after refactoring:
 - `BUGFIX_SUMMARY.md`
 - `BUGFIX_chatTriggerType.md`
 - `CHANGES_SUMMARY.md`
@@ -58,9 +56,15 @@ Documentation files that became obsolete:
 - `给用户的说明.md`
 - `调试日志说明.md`
 - `问题修复说明.md`
-- `amazon-q-developer-cli/` (git submodule)
-- `docs/amazon-q-cli-analysis/`
 - `scripts/fix-403-error.sh`
+
+### Preserved Reference Materials
+
+**Important:** The following reference materials are preserved as they remain valuable:
+- `AMAZON_Q_CLI_INTEGRATION.md` - Integration guide with Amazon Q Developer CLI
+- `ANALYSIS.md` - In-depth analysis of CodeWhisperer protocol
+- `amazon-q-developer-cli/` - Git submodule with AWS's official CLI source code (for reference)
+- `docs/amazon-q-cli-analysis/` - Comprehensive analysis documentation of the CLI codebase
 
 ### Dependencies
 
