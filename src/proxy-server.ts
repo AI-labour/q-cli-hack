@@ -47,7 +47,7 @@ app.post('/v1/chat/completions', async (req, res) => {
       res.setHeader('Connection', 'keep-alive');
 
       try {
-        const events = client.generateAssistantResponse(cwRequest);
+        const events = client.sendMessage(cwRequest);
         const openAIStream = converter.convertToOpenAIStreamingResponse(
           events,
           request.model,
@@ -77,9 +77,7 @@ app.post('/v1/chat/completions', async (req, res) => {
         res.end();
       }
     } else {
-      const result = await client.generateAssistantResponseNonStreaming(
-        cwRequest
-      );
+      const result = await client.sendMessageNonStreaming(cwRequest);
       const response = converter.convertToOpenAINonStreamingResponse(
         result,
         request.model,

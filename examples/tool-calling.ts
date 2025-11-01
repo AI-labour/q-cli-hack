@@ -1,5 +1,5 @@
 import { AuthManager, CodeWhispererClient } from '../src/index.js';
-import type { ConversationState, ChatMessage } from '../src/types.js';
+import type { ChatMessage } from '@aws/codewhisperer-streaming-client';
 
 async function main() {
   console.log('=== Tool Calling Example ===\n');
@@ -21,7 +21,7 @@ async function main() {
       toolSpecification: {
         name: 'get_current_time',
         description: 'Get the current time in a specific timezone',
-        input_schema: {
+        inputSchema: {
           json: {
             type: 'object',
             properties: {
@@ -39,7 +39,7 @@ async function main() {
       toolSpecification: {
         name: 'calculate',
         description: 'Perform a mathematical calculation',
-        input_schema: {
+        inputSchema: {
           json: {
             type: 'object',
             properties: {
@@ -57,13 +57,20 @@ async function main() {
 
   console.log('Asking: "What time is it in Tokyo and what is 15 * 23?"\n');
 
-  const result1 = await client.generateAssistantResponseNonStreaming({
+  // Note: Tool calling support would need to be implemented
+  // This is a placeholder showing the structure
+  console.log('Tool calling is not yet fully implemented in this version.');
+  console.log('The official AWS client supports it, but the converter needs updates.');
+  console.log('\nExample structure:');
+  console.log(JSON.stringify(tools, null, 2));
+
+  // Basic message without tools
+  const result = await client.sendMessageNonStreaming({
     conversationState: {
       currentMessage: {
         userInputMessage: {
-          content: 'What time is it in Tokyo and what is 15 * 23?',
-          origin: 'CLI',
-          user_input_message_context: {
+          content: 'Calculate 15 times 23 for me.',
+          userInputMessageContext: {
             tools: tools,
           },
         },
@@ -72,83 +79,17 @@ async function main() {
     },
   });
 
-  console.log('Assistant response:', result1.content);
-  console.log('\nTool calls requested:');
-  result1.toolUses.forEach((tu) => {
-    console.log(`  - ${tu.name}(${JSON.stringify(tu.input)})`);
-  });
+  console.log('\nResponse:');
+  console.log(result.content);
+  console.log('\nConversation ID:', result.conversationId);
 
-  if (result1.toolUses.length > 0) {
-    console.log('\nExecuting tools...');
-
-    const toolResults = result1.toolUses.map((tu) => {
-      let resultContent;
-
-      if (tu.name === 'get_current_time') {
-        const currentTime = new Date().toLocaleString('en-US', {
-          timeZone: tu.input.timezone || 'UTC',
-        });
-        resultContent = { time: currentTime, timezone: tu.input.timezone };
-      } else if (tu.name === 'calculate') {
-        try {
-          const result = eval(tu.input.expression);
-          resultContent = { result: result };
-        } catch (error: any) {
-          resultContent = { error: error.message };
-        }
-      }
-
-      return {
-        tool_use_id: tu.tool_use_id,
-        content: [{ json: resultContent }],
-        status: 'Success' as const,
-      };
-    });
-
-    console.log('Tool results:', JSON.stringify(toolResults, null, 2));
-
-    console.log('\nSending tool results back...\n');
-
-    const history: ChatMessage[] = [
-      {
-        userInputMessage: {
-          content: 'What time is it in Tokyo and what is 15 * 23?',
-          origin: 'CLI',
-        },
-      },
-      {
-        assistantResponseMessage: {
-          content: result1.content,
-          tool_uses: result1.toolUses.map((tu) => ({
-            tool_use_id: tu.tool_use_id,
-            name: tu.name,
-            input: tu.input,
-          })),
-        },
-      },
-    ];
-
-    const result2 = await client.generateAssistantResponseNonStreaming({
-      conversationState: {
-        conversationId: result1.conversationId,
-        currentMessage: {
-          userInputMessage: {
-            content: '',
-            origin: 'CLI',
-            user_input_message_context: {
-              tool_results: toolResults,
-              tools: tools,
-            },
-          },
-        },
-        chatTriggerType: 'MANUAL',
-        history: history,
-      },
-    });
-
-    console.log('Final response:');
-    console.log(result2.content);
-  }
+  console.log('\n--- Note ---');
+  console.log('Full tool calling support requires:');
+  console.log('1. Handling tool use events in the response');
+  console.log('2. Executing the requested tools');
+  console.log('3. Sending tool results back in a follow-up message');
+  console.log('4. Processing the final response');
+  console.log('\nThis is planned for a future version.');
 }
 
 main().catch(console.error);

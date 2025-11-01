@@ -32,12 +32,11 @@ async function main() {
     console.log('Response:');
     console.log('[DEBUG] Starting to iterate over events...');
     let eventCounter = 0;
-    for await (const event of client.generateAssistantResponse({
+    for await (const event of client.sendMessage({
       conversationState: {
         currentMessage: {
           userInputMessage: {
             content: question,
-            origin: 'CLI',
           },
         },
         chatTriggerType: 'MANUAL',
@@ -46,12 +45,12 @@ async function main() {
       eventCounter++;
       console.log(`[DEBUG] CLI received event ${eventCounter}:`, JSON.stringify(event, null, 2));
       
-      if ('assistantResponseEvent' in event) {
+      if ('assistantResponseEvent' in event && event.assistantResponseEvent) {
         console.log('[DEBUG] Processing assistantResponseEvent');
-        process.stdout.write(event.assistantResponseEvent.content);
-      } else if ('codeEvent' in event) {
+        process.stdout.write(event.assistantResponseEvent.content || '');
+      } else if ('codeEvent' in event && event.codeEvent) {
         console.log('[DEBUG] Processing codeEvent');
-        process.stdout.write(event.codeEvent.content);
+        process.stdout.write(event.codeEvent.content || '');
       } else if ('messageMetadataEvent' in event) {
         console.log('[DEBUG] Processing messageMetadataEvent');
         console.log(
